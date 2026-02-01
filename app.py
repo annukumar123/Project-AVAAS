@@ -9,7 +9,7 @@ from flask import Flask, render_template, jsonify, request
 
 
 
-load_dotenv()
+# load_dotenv()
 app = Flask(__name__)
 
 # Credentials
