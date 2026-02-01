@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multilingual Ride Assistant</title>
+    <style>
+        body { background: #1a1a1a; color: white; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        .container { text-align: center; background: #2d2d2d; padding: 40px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); width: 400px; }
+        
+        /* --- RAINBOW COLOR ADDITIONS START --- */
+        .mic-wrapper {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            margin: 20px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            /* Rainbow background */
+            background: conic-gradient(red, orange, yellow, green, cyan, blue, violet, red);
+            animation: rotate-rainbow 3s linear infinite;
+            padding: 5px; 
+        }
+
+        @keyframes rotate-rainbow {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .mic-btn { 
+            background: #2d2d2d; /* Changed from blue to match container */
+            border: none; 
+            width: 90px; 
+            height: 90px; 
+            border-radius: 50%; 
+            cursor: pointer; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            transition: 0.3s;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* Rainbow Pulse when active */
+        .mic-btn.active { 
+            background: #d83b01; 
+            animation: pulse 1s infinite, active-glow 1s infinite alternate; 
+        }
+
+        @keyframes active-glow {
+            from { box-shadow: 0 0 10px red, 0 0 20px orange; }
+            to { box-shadow: 0 0 20px blue, 0 0 40px violet; }
+        }
+        /* --- RAINBOW COLOR ADDITIONS END --- */
+
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+        input { padding: 10px; border-radius: 5px; border: none; width: 80%; margin-bottom: 20px; }
+        #log { margin-top: 20px; font-size: 14px; min-height: 50px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Ride Agent</h2>
+        
+        <div class="mic-wrapper">
+            <button id="micBtn" class="mic-btn" onclick="startRecognition()">
+                <svg viewBox="0 0 24 24" width="40" height="40" fill="white">
+                    <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+                </svg>
+            </button>
+        </div>
+
+        <p id="status">Speak yours wake word first</p>
+        <div id="log"></div>
+    </div>
+
+ <script>
+    let isLooping = false;
+
+    async function startRecognition() {
+        if (isLooping) return; // Prevent multiple loops
+        isLooping = true;
+        
+        const btn = document.getElementById('micBtn');
+        const log = document.getElementById('log');
+        const status = document.getElementById('status');
+
+        while (isLooping) {
+            btn.classList.add('active');
+            status.innerText = "Listening...";
+            
+            try {
+                const response = await fetch('/run_assistant');
+                const data = await response.json();
+                
+                if (data.user) {
+                    log.innerHTML = `<p><b>You:</b> ${data.user}</p><p><b>AI:</b> ${data.assistant}</p>`;
+                    
+                    // Logic to break the loop if you say stop/exit
+                    const exitWords = ["stop", "exit", "bye", "goodbye", "shutdown"];
+                    if (exitWords.some(word => data.user.toLowerCase().includes(word))) {
+                        isLooping = false;
+                        status.innerText = "Session Ended.";
+                    }
+                } else {
+                    // If no speech is detected, stop the loop to prevent infinite errors
+                    isLooping = false;
+                    status.innerText = "No speech detected. Stopped.";
+                }
+            } catch (e) {
+                console.error(e);
+                isLooping = false;
+                status.innerText = "Connection Error.";
+            } finally {
+                if (!isLooping) {
+                    btn.classList.remove('active');
+                }
+            }
+            
+            // Short delay to give the AI time to finish speaking before the mic opens again
+            await new Promise(resolve => setTimeout(resolve, 500));
+        }
+    }
+</script>
+</body>
+</html>
